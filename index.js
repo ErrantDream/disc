@@ -84,6 +84,7 @@ import {
 import { setImageGenerationTimeoutMs } from "./src/image-generation.js";
 import {
   handleUserMessage,
+  handlePausedUserMessage,
   handleExecuteCommand,
   handleGetAutocomplete,
 } from "./src/commands.js";
@@ -208,6 +209,12 @@ function connect() {
       if (data.type === "user_message") {
         $(document).trigger("smart_memory:dismiss_recap");
         await handleUserMessage(data);
+        return;
+      }
+
+      if (data.type === "paused_user_message") {
+        $(document).trigger("smart_memory:dismiss_recap");
+        await handlePausedUserMessage(data);
         return;
       }
 

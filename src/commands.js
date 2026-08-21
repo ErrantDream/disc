@@ -445,6 +445,30 @@ export async function handleUserMessage(data) {
   }
 }
 
+/**
+ * Handles a paused user_message: add it to ST chat history without generating
+ * an assistant response.
+ */
+export async function handlePausedUserMessage(data) {
+  sharedState.lastActiveChatId = data.chatId || sharedState.lastActiveChatId;
+  sharedState.lastActiveUserLocale = data.userLocale ?? null;
+
+  if (data.mappedPersona) {
+    try {
+      await executeSlashCommandsWithOptions(
+        `/persona-set ${sanitizeSlashArg(data.mappedPersona)}`,
+      );
+    } catch (err) {
+      console.warn(
+        `[Discord Bridge] Failed to auto-switch persona to "${data.mappedPersona}":`,
+        err,
+      );
+    }
+  }
+
+  await sendMessageAsUser(data.text);
+}
+
 // ---------------------------------------------------------------------------
 // handleExecuteCommand
 // ---------------------------------------------------------------------------

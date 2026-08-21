@@ -752,7 +752,9 @@ if (DISCORD_PLUGIN_ENABLED) {
     const userLocale = getLangForUser('discord', message.author.id) || null;
     stClient.send(
       JSON.stringify({
-        type: 'user_message',
+        type: isChannelPaused(message.channel.id)
+          ? 'paused_user_message'
+          : 'user_message',
         text: content,
         chatId: conversationId,
         userId: message.author.id,
