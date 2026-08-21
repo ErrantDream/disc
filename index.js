@@ -63,7 +63,12 @@
 // ---------------------------------------------------------------------------
 
 import { setWs, getWs, safeSend } from "./src/ws.js";
-import { MODULE_NAME, getSettings, updateStatus } from "./src/settings.js";
+import {
+  EXTENSION_PATH,
+  MODULE_NAME,
+  getSettings,
+  updateStatus,
+} from "./src/settings.js";
 import { sharedState } from "./src/state.js";
 import {
   loadUserLocale,
@@ -290,9 +295,7 @@ jQuery(async () => {
     }
     await loadUiLocale(stLocale);
 
-    const settingsHtml = await $.get(
-      `/scripts/extensions/third-party/${MODULE_NAME}/settings.html`,
-    );
+    const settingsHtml = await $.get(`${EXTENSION_PATH}settings.html`);
     const $settings = $(settingsHtml);
     const settingsRoot = $settings.filter("*")[0] ?? $settings.find("*")[0];
     if (settingsRoot) applyUiTranslations(settingsRoot);

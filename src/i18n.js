@@ -29,9 +29,9 @@
  * applyUiTranslations(root) - walks DOM and replaces data-i18n content
  */
 
-import { MODULE_NAME } from "./settings.js";
+import { EXTENSION_PATH } from "./settings.js";
 
-const LOCALE_BASE = `/scripts/extensions/third-party/${MODULE_NAME}/server/locales`;
+const LOCALE_BASE = `${EXTENSION_PATH}server/locales`;
 
 let _userStrings = {};
 let _uiStrings = {};

@@ -22,6 +22,7 @@
  */
 
 export const MODULE_NAME = "SillyTavern-Discord-Connector";
+export const EXTENSION_PATH = new URL("../", import.meta.url).pathname;
 
 export const DEFAULT_SETTINGS = {
   bridgeUrl: "ws://127.0.0.1:2333",
