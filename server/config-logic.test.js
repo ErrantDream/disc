@@ -1,0 +1,205 @@
+/**
+ * config-logic.test.js - SillyTavern Discord Connector: Config Logic Tests
+ * Copyright (c) 2026 Senjin the Dragon.
+ * https://github.com/senjinthedragon/SillyTavern-Discord-Connector
+ * Licensed under the MIT License.
+ * See /server/LICENSE for full license information.
+ *
+ * Automated test suite for the configuration validation engine.
+ * Utilizes the native node:test runner and node:assert/strict to verify
+ * that config-logic.js correctly handles user input and edge cases.
+ *
+ * Test coverage includes:
+ * - Default Assignment: Verifies that omitted optional fields receive their
+ * proper default values and millisecond derived fields are calculated.
+ * - Credential Safety: Ensures the bridge refuses to boot if the default
+ * placeholder Discord token is still present.
+ * - Type Integrity: Validates that list-based settings (enabledPlugins,
+ * externalPlugins) are actual arrays of non-empty strings.
+ * - Bounds Checking: Confirms that timeout and circuit breaker values are
+ * strictly positive numbers to prevent infinite hangs or instant failures.
+ * - Resilience: Checks the "soft-fail" logic for internationalization
+ * settings, ensuring invalid timezones or locales produce actionable
+ * warnings rather than fatal crashes.
+ * Run with: npm test (from the server folder)
+ */
+
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { createConfig } = require("./config-logic");
+
+test("createConfig applies timeout defaults and derived millisecond fields", () => {
+  const { config, warnings } = createConfig({
+    discordToken: "token",
+    wssPort: 9000,
+  });
+
+  assert.equal(config.queueTaskTimeoutSeconds, 30);
+  assert.equal(config.queueTaskTimeoutMs, 30000);
+  assert.equal(config.imagePlaceholderTimeoutSeconds, 180);
+  assert.equal(config.imagePlaceholderTimeoutMs, 180000);
+  assert.deepEqual(warnings, []);
+});
+
+test("createConfig defaults wssPort to 2333 and rejects invalid values", () => {
+  const { config } = createConfig({ discordToken: "token" });
+  assert.equal(config.wssPort, 2333);
+
+  assert.throws(
+    () => createConfig({ discordToken: "token", wssPort: 0 }),
+    /wssPort must be an integer/,
+  );
+  assert.throws(
+    () => createConfig({ discordToken: "token", wssPort: 99999 }),
+    /wssPort must be an integer/,
+  );
+  assert.throws(
+    () => createConfig({ discordToken: "token", wssPort: 2.5 }),
+    /wssPort must be an integer/,
+  );
+});
+
+test("createConfig throws for placeholder Discord token when Discord plugin is enabled", () => {
+  assert.throws(
+    () =>
+      createConfig({
+        enabledPlugins: ["discord"],
+        discordToken: "YOUR_DISCORD_BOT_TOKEN_HERE",
+      }),
+    /Discord plugin is enabled|Discord Bot Token/,
+  );
+});
+
+test("createConfig throws when Discord is enabled but token is missing or empty", () => {
+  assert.throws(
+    () => createConfig({ enabledPlugins: ["discord"] }),
+    /discordToken is required/,
+  );
+  assert.throws(
+    () => createConfig({ enabledPlugins: ["discord"], discordToken: "" }),
+    /discordToken is required/,
+  );
+  assert.throws(
+    () => createConfig({ enabledPlugins: ["discord"], discordToken: null }),
+    /discordToken is required/,
+  );
+});
+
+test("createConfig does not require discordToken when Discord plugin is not enabled", () => {
+  assert.doesNotThrow(() =>
+    createConfig({ enabledPlugins: ["telegram"], wssPort: 2333 }),
+  );
+});
+
+test("createConfig allows non-discord enabled plugin names for external plugins", () => {
+  const { config } = createConfig({
+    enabledPlugins: ["discord", "telegram"],
+    discordToken: "token",
+    externalPlugins: [{ name: "telegram", module: "../private/telegram.js" }],
+  });
+
+  assert.deepEqual(config.enabledPlugins, ["discord", "telegram"]);
+});
+
+test("createConfig throws when enabledPlugins contains invalid entry", () => {
+  assert.throws(
+    () =>
+      createConfig({
+        enabledPlugins: ["discord", ""],
+        discordToken: "token",
+      }),
+    /entries must be non-empty strings/,
+  );
+});
+
+test("createConfig throws when externalPlugins is not an array", () => {
+  assert.throws(
+    () =>
+      createConfig({
+        enabledPlugins: ["discord"],
+        discordToken: "token",
+        externalPlugins: "not-array",
+      }),
+    /externalPlugins must be an array/,
+  );
+});
+
+test("createConfig throws for invalid queue timeout", () => {
+  assert.throws(
+    () =>
+      createConfig({
+        discordToken: "token",
+        queueTaskTimeoutSeconds: 0,
+      }),
+    /queueTaskTimeoutSeconds must be a positive number/,
+  );
+});
+
+test("createConfig throws for invalid image placeholder timeout", () => {
+  assert.throws(
+    () =>
+      createConfig({
+        discordToken: "token",
+        imagePlaceholderTimeoutSeconds: -1,
+      }),
+    /imagePlaceholderTimeoutSeconds must be a positive number/,
+  );
+});
+
+test("createConfig falls back when timezone or locale are invalid", () => {
+  const { config, warnings } = createConfig({
+    discordToken: "token",
+    timezone: "Bad/Timezone",
+    locale: "bad_locale_value",
+  });
+
+  assert.equal(config.timezone, "UTC");
+  assert.equal(config.locale, null);
+  assert.equal(warnings.length, 2);
+});
+
+test("createConfig throws for invalid circuit breaker threshold", () => {
+  assert.throws(
+    () =>
+      createConfig({
+        discordToken: "token",
+        plugins: {
+          discord: {
+            circuitBreaker: { enabled: true, failureThreshold: 0 },
+          },
+        },
+      }),
+    /circuitBreaker\.failureThreshold/,
+  );
+});
+
+test("createConfig throws for invalid circuit breaker cooldown", () => {
+  assert.throws(
+    () =>
+      createConfig({
+        discordToken: "token",
+        plugins: {
+          discord: {
+            circuitBreaker: {
+              enabled: true,
+              failureThreshold: 5,
+              cooldownSeconds: -1,
+            },
+          },
+        },
+      }),
+    /circuitBreaker\.cooldownSeconds/,
+  );
+});
+
+test("createConfig accepts plugin-first config without discord token", () => {
+  const { config } = createConfig({
+    enabledPlugins: ["telegram"],
+    plugins: { telegram: { enabled: true, botToken: "abc" } },
+    wssPort: 2333,
+  });
+
+  assert.deepEqual(config.enabledPlugins, ["telegram"]);
+});

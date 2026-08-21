@@ -1,0 +1,59 @@
+{
+  "name": "@senjinthedragon/sillytavern-discord-connector",
+  "version": "1.8.3",
+  "description": "Full-featured Discord bridge for SillyTavern with image support and slash commands.",
+  "keywords": [
+    "sillytavern",
+    "discord",
+    "bridge",
+    "bot",
+    "roleplay",
+    "connector",
+    "chatbot",
+    "ai",
+    "llm",
+    "assistant"
+  ],
+  "files": [
+    "index.js",
+    "manifest.json",
+    "settings.html",
+    "style.css",
+    "src/**/*.js",
+    "server/*.js",
+    "server/package.json",
+    "server/config.example.js",
+    "server/start-bridge.bat",
+    "!server/config.js",
+    "scripts/release-checklist.js"
+  ],
+  "scripts": {
+    "version": "node -e \"if(require('child_process').execSync('git branch --show-current').toString().trim()!=='main'){process.stderr.write('Version bumps must be done on main.\\n');process.exit(1)}\" && cd server && npm install && cd .. && version-everything manifest.json server/package.json && git add manifest.json server/package.json package-lock.json server/package-lock.json",
+    "bump": "npm version patch && git push origin HEAD --tags",
+    "bump-minor": "npm version minor && git push origin HEAD --tags",
+    "bump-major": "npm version major && git push origin HEAD --tags",
+    "verify-release": "npm run release-checklist",
+    "test-package": "npm pack --dry-run",
+    "install-server": "cd server && npm install",
+    "test-release": "npm run verify-release",
+    "start": "cd server && node server.js",
+    "release-checklist": "node scripts/release-checklist.js"
+  },
+  "author": "Senjin the Dragon <https://github.com/senjinthedragon>",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/senjinthedragon/SillyTavern-Discord-Connector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/senjinthedragon/SillyTavern-Discord-Connector/issues"
+  },
+  "homepage": "https://github.com/senjinthedragon/SillyTavern-Discord-Connector#readme",
+  "devDependencies": {
+    "version-everything": "^0.11.4"
+  }
+}
